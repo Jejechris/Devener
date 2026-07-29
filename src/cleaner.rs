@@ -3,8 +3,6 @@ use colored::Colorize;
 use humansize::{format_size, DECIMAL};
 use inquire::{Confirm, MultiSelect};
 use std::fmt;
-use std::fs;
-use std::io::ErrorKind;
 
 impl fmt::Display for ArtifactItem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -45,7 +43,7 @@ pub fn select_artifacts_to_clean(items: &[ArtifactItem]) -> Vec<ArtifactItem> {
 pub fn confirm_deletion(selected_count: usize, total_bytes: u64) -> bool {
     let human_size = format_size(total_bytes, DECIMAL);
     let msg = format!(
-        "Anda akan menghapus {} folder, total {} — lanjutkan?",
+        "Anda akan memindahkan {} folder ke Recycle Bin, total {} — lanjutkan?",
         selected_count.to_string().bold().red(),
         human_size.bold().yellow()
     );
@@ -61,10 +59,10 @@ pub fn execute_clean(items: &[ArtifactItem]) -> DeleteReport {
     let mut reclaimed_bytes = 0;
     let mut failed_items = Vec::new();
 
-    println!("\n{}", "Membersihkan folder terpilih...".bold().cyan());
+    println!("\n{}", "Memindahkan folder terpilih ke Recycle Bin...".bold().cyan());
 
     for item in items {
-        match fs::remove_dir_all(&item.path) {
+        match trash::delete(&item.path) {
             Ok(_) => {
                 success_count += 1;
                 reclaimed_bytes += item.size;
@@ -75,9 +73,8 @@ pub fn execute_clean(items: &[ArtifactItem]) -> DeleteReport {
                 );
             }
             Err(err) => {
-                let reason = match err.kind() {
-                    ErrorKind::PermissionDenied => "permission denied".to_string(),
-                    ErrorKind::NotFound => "folder tidak ditemukan".to_string(),
+                let reason = match &err {
+                    trash::Error::Os { description, .. } => description.clone(),
                     _ => err.to_string(),
                 };
                 println!(
@@ -108,7 +105,7 @@ pub fn print_final_report(report: &DeleteReport) {
 
     if report.success_count > 0 {
         println!(
-            "{} Berhasil menghapus {} folder",
+            "{} Berhasil memindahkan {} folder ke Recycle Bin",
             "✔".bold().green(),
             report.success_count.to_string().bold().green()
         );
@@ -121,7 +118,7 @@ pub fn print_final_report(report: &DeleteReport) {
 
     for failed in &report.failed_items {
         println!(
-            "{} 1 folder gagal dihapus ({}): {}",
+            "{} 1 folder gagal dipindahkan ({}): {}",
             "✖".bold().red(),
             failed.reason,
             failed.path
@@ -137,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_execute_clean_deletes_directory() {
-        let temp_dir = std::env::temp_dir().join("devener_test_clean");
+        let temp_dir = std::env::temp_dir().join("devener_test_trash");
         let dummy_target = temp_dir.join("dummy_node_modules");
         fs::create_dir_all(&dummy_target).unwrap();
         fs::write(dummy_target.join("package.json"), "{}").unwrap();
