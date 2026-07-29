@@ -1,5 +1,8 @@
 # devener 🧹 (v5)
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![GitHub release](https://img.shields.io/github/v/release/Jejechris/Devener)](https://github.com/Jejechris/Devener/releases)
+
 **Dev Environment Cleaner CLI** — A fast, cross-platform CLI tool built in Rust to discover, scan, and clean unused build artifacts, cache folders, and academic build outputs across your projects while keeping your files safe.
 
 ---
@@ -8,7 +11,7 @@
 
 - **🔄 Self-Update Engine (`devener update`) (v5)**: Directly upgrades the executable from the latest GitHub Release binary assets (`devener-windows-amd64.exe`, `devener-linux-amd64`, `devener-macos-amd64`) using `self_update`.
 - **💡 Silent Release Check & Notifications (Model B) (v5)**: Non-blocking background thread checks for newer GitHub releases during `devener scan` and displays a polite terminal notification footer if an upgrade is available.
-- **🚀 Automated CI/CD Release Pipeline (`.github/workflows/release.yml`) (v5)**: Pushing git release tags (e.g. `v0.5.0`) automatically builds zero-dependency release binaries for Windows, Linux, and macOS, attaching them to GitHub Releases.
+- **🚀 Automated CI/CD Release Pipeline (`.github/workflows/release.yml`) (v5)**: Pushing git release tags (e.g. `v0.5.2`) automatically builds zero-dependency release binaries for Windows, Linux, and macOS, attaching them to GitHub Releases.
 - **🌐 English Localization (v4)**: Complete international English user interface, CLI options, warnings, error messages, and summary reports.
 - **🛡️ Recycle Bin / Trash Safety Net (Default)**: Items are moved to **Recycle Bin (Windows)** / **Trash (macOS)** / **XDG Trash (Linux)** by default. Accidental deletions can easily be restored from your OS Recycle Bin.
 - **⚡ Permanent Deletion Flag (`--permanent`)**: Bypasses the Recycle Bin for direct permanent file/folder removal (`std::fs::remove_dir_all`) with explicit red warning confirmation prompts.
@@ -107,4 +110,4 @@ cargo install --path .
 
 ## 📜 License
 
-MIT License © 2026
+GNU General Public License v3.0 (GPLv3) © 2026 Jejechris
