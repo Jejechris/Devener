@@ -1,4 +1,5 @@
 mod cleaner;
+mod config;
 mod models;
 mod scanner;
 
@@ -22,6 +23,10 @@ enum Commands {
         /// Path to scan (defaults to current directory if not specified)
         #[arg(default_value = ".")]
         path: PathBuf,
+
+        /// Additional paths or patterns to exclude from scan results
+        #[arg(short, long)]
+        exclude: Vec<String>,
     },
 }
 
@@ -29,9 +34,16 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Scan { path } => {
+        Commands::Scan { path, exclude } => {
             println!("Scanning directory: {}\n", path.display().to_string().cyan());
-            let items = scanner::scan_directory(path);
+
+            let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let file_config = config::DevenerConfig::load_from_dir(&current_dir);
+
+            let mut merged_excludes = file_config.exclude;
+            merged_excludes.extend(exclude.clone());
+
+            let items = scanner::scan_directory(path, &merged_excludes);
 
             if items.is_empty() {
                 println!("{}", "No cleanable artifacts found.".yellow());
