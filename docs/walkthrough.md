@@ -31,20 +31,6 @@ Documenting progress and milestone steps for building `devener`.
 - Added `devener scan [PATH]` command support with default fallback path set to `.` (current directory).
 - Added automatic `--help` and `--version` support via `clap`.
 
-### Key Rust Concepts Learned
-- **Structs & Derive Macros (`#[derive(Parser)]`)**: Data structures that automatically generate CLI parsing logic at compile time.
-- **Enums & Pattern Matching (`match`)**: Representing subcommands cleanly as enum variants (`Commands::Scan`) and enforcing exhaustive handling with `match`.
-- **`PathBuf`**: Standard library type for cross-platform path manipulation.
-- **Borrowing (`&`)**: Passing a reference (`&cli.command`) to access data without taking ownership.
-
-### Verification & Testing
-- Command: `cargo run -- scan .`
-  Output: `Target path to scan: .`
-- Command: `cargo run -- scan`
-  Output: `Target path to scan: .`
-- Command: `cargo run -- scan src`
-  Output: `Target path to scan: src`
-
 ---
 
 ## Milestone 2: Directory Scanning & Pattern Matching
@@ -53,21 +39,6 @@ Documenting progress and milestone steps for building `devener`.
 - Created data model in [src/models.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/models.rs) (`ArtifactItem`).
 - Created scanning logic in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs) using `walkdir::WalkDir`.
 - Configured MVP target patterns (`node_modules`, `.next`, `dist`, `build`, `__pycache__`, `.venv`, `target`).
-- Implemented directory pruning (`it.skip_current_dir()`) to avoid descending into matched artifact folders.
-- Wired scanning logic into [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs) to display raw list of discovered targets.
-
-### Key Rust Concepts Learned
-- **Module System (`mod` & `pub`)**: Splitting code into clean files ([src/models.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/models.rs), [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs)) and exposing symbols using `pub`.
-- **Directory Traversal & Pruning**: Using `WalkDir` iterator and `.skip_current_dir()` for optimized scanning performance.
-- **Vectors (`Vec<T>`)**: Dynamic array type for collecting matching artifact items.
-- **Conditional Compilation & Unit Testing (`#[cfg(test)]`)**: Writing unit tests right next to source code.
-
-### Verification & Testing
-- Created dummy project tree `test_dummy` containing `.venv`, `__pycache__`, `target`, `dist`, and `node_modules`.
-- Command: `cargo run -- scan test_dummy`
-  Discovered all 5 artifact folders successfully.
-- Command: `cargo test`
-  Output: `cargo test: 1 passed (1 suite, 0.00s)`
 
 ---
 
@@ -77,17 +48,6 @@ Documenting progress and milestone steps for building `devener`.
 - Added `size: u64` field to `ArtifactItem` in [src/models.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/models.rs).
 - Implemented recursive size calculation `get_dir_size` and size sorting (`sort_by`) in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
 - Formatted output table in [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs) using `humansize` (`format_size`) and `colored` terminal text.
-- Added total potential reclaimable space calculation.
-
-### Key Rust Concepts Learned
-- **`u64` Unsigned Integers**: High-capacity integer type for byte counts.
-- **Sorting Closures (`sort_by`)**: Sorting vectors descending (`b.size.cmp(&a.size)`).
-- **Formatters & External Crates**: `humansize` formatting raw byte values to human-readable strings (`MB`, `kB`), and `colored` styling terminal output.
-
-### Verification & Testing
-- Command: `cargo test`
-  Output: `1 passed`
-- Command: `cargo run -- scan test_dummy`
 
 ---
 
@@ -97,7 +57,6 @@ Documenting progress and milestone steps for building `devener`.
 - Created interactive CLI module in [src/cleaner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/cleaner.rs).
 - Implemented `std::fmt::Display` for `ArtifactItem` to support rendering items in terminal menus.
 - Added interactive multi-select checkbox prompt using `inquire::MultiSelect`.
-- Added final preview confirmation prompt using `inquire::Confirm`.
 
 ---
 
@@ -105,9 +64,7 @@ Documenting progress and milestone steps for building `devener`.
 
 ### Summary
 - Implemented actual recursive deletion logic `execute_clean` using `std::fs::remove_dir_all`.
-- Added error handling for filesystem error kinds (`PermissionDenied`, `NotFound`).
 - Added summary statistics structures `DeleteReport` and `FailedItem`.
-- Implemented `print_final_report` to render success counters, reclaimed space, and failed path details.
 
 ---
 
@@ -115,7 +72,6 @@ Documenting progress and milestone steps for building `devener`.
 
 ### Summary
 - Created production-ready [README.md](file:///c:/Users/Senna/Desktop/Projects/Devener/README.md).
-- Verified release build compilation (`cargo build --release`).
 
 ---
 
@@ -207,16 +163,13 @@ Documenting progress and milestone steps for building `devener`.
 
 ### Summary
 - Implemented `--permanent` flag in [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs) and [src/cleaner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/cleaner.rs).
-- Displayed explicit bold red warning dialog before proceeding with permanent filesystem removal (`fs::remove_dir_all` / `fs::remove_file`).
 
 ---
 
 ## Milestone 20: Academic Patterns (Jupyter & LaTeX Files)
 
 ### Summary
-- Added `.ipynb_checkpoints` to target directory patterns.
-- Implemented individual LaTeX file matching for `.aux`, `.log`, `.out`, and `.synctex.gz` extensions in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
-- Added unit test `test_latex_file_detection`.
+- Added `.ipynb_checkpoints` and LaTeX file extensions (`.aux`, `.log`, `.out`, `.synctex.gz`) to [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
 
 ---
 
@@ -224,42 +177,64 @@ Documenting progress and milestone steps for building `devener`.
 
 ### Summary
 - Implemented `--json` output flag in [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs).
-- Derived `Serialize` & `Deserialize` on `ArtifactItem` in [src/models.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/models.rs).
-- Configured silent scan execution (skipping spinner and interactive prompts) when `--json` flag is passed.
 
 ---
 
 ## Milestone 22: File Age Filtering (`--older-than <N>d|h|m`)
 
 ### Summary
-- Implemented `parse_age_threshold` and `is_item_older_than` using `std::fs::Metadata::modified()` in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
-- Filtered out matching items modified more recently than the specified threshold.
+- Implemented `parse_age_threshold` and `is_item_older_than` in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
 
 ---
 
 ## Milestone 23: Guarded Automation Mode (`--auto`)
 
 ### Summary
-- Enforced strict safety guard rules:
-  1. `--auto` requires `--older-than` threshold (program aborts if missing).
-  2. `--auto` cannot be combined with `--permanent` (program aborts if passed).
-  3. Auto mode ALWAYS routes deletions through the OS Recycle Bin (`trash::delete`).
-  4. Auto mode prints list of target items about to be processed and outputs complete final summary reports.
+- Enforced safety guard rules requiring `--older-than` and rejecting `--permanent`.
 
 ---
 
 ## Milestone 24: Lifetime Stats & History Tracking (`devener stats`)
 
 ### Summary
-- Created [src/stats.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/stats.rs) using `dirs` crate to maintain log records in `~/.devener/history.json`.
-- Implemented `devener stats` subcommand displaying lifetime operations count, items cleaned, total reclaimed bytes, and recent history logs.
+- Created [src/stats.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/stats.rs) maintaining `~/.devener/history.json`.
 
 ---
 
-## Milestone 25: Full Regression Check, Release Build v4 & Git Push
+## Milestone 25: Full Regression Check & Release Build v4
+
+### Summary
+- Built v4 release binary and pushed commit to GitHub.
+
+---
+
+## Milestone 26: Setup GitHub Actions CI/CD Release Workflow (`.github/workflows/release.yml`)
+
+### Summary
+- Created [.github/workflows/release.yml](file:///c:/Users/Senna/Desktop/Projects/Devener/.github/workflows/release.yml) for automated cross-platform binary builds on git release tags.
+
+---
+
+## Milestone 27: Self-Update Engine (`self_update` & `devener update`)
+
+### Summary
+- Created [src/update.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/update.rs) using `self_update` crate to check GitHub Releases and perform executable binary swapping.
+- Added `devener update` subcommand in [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs).
+
+---
+
+## Milestone 28: Model B — Silent Background Update Check & Terminal Notification
+
+### Summary
+- Implemented `check_for_latest_release_silent` in [src/update.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/update.rs).
+- Spawned non-blocking background thread during `devener scan` to check GitHub Releases silently and render polite upgrade notification footer if a newer version is available.
+
+---
+
+## Milestone 29: Full Regression Check, Release Build v5 & Git Push
 
 ### Summary
 - Verified test suite: all 7 unit tests passed cleanly (`7 passed`).
-- Built optimized release binary `cargo build --release` in 6.61s.
-- Created git commit `feat(v4): localization to English, permanent deletion flag, academic patterns, JSON output, age filtering, guarded auto-clean, and stats tracking`.
-- Pushed commit to remote repository `https://github.com/Jejechris/Devener.git`.
+- Built optimized release binary `cargo build --release` in 1m 37s.
+- Created git commit `feat(v5): add self-update engine, Model B silent release check notification, and GitHub Actions CI/CD release workflow`.
+- Pushed commit to remote GitHub repository `https://github.com/Jejechris/Devener.git`.

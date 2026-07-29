@@ -1,11 +1,14 @@
-# devener 🧹 (v4)
+# devener 🧹 (v5)
 
 **Dev Environment Cleaner CLI** — A fast, cross-platform CLI tool built in Rust to discover, scan, and clean unused build artifacts, cache folders, and academic build outputs across your projects while keeping your files safe.
 
 ---
 
-## ✨ Features & Capabilities (v4)
+## ✨ Features & Capabilities (v5)
 
+- **🔄 Self-Update Engine (`devener update`) (v5)**: Directly upgrades the executable from the latest GitHub Release binary assets (`devener-windows-amd64.exe`, `devener-linux-amd64`, `devener-macos-amd64`) using `self_update`.
+- **💡 Silent Release Check & Notifications (Model B) (v5)**: Non-blocking background thread checks for newer GitHub releases during `devener scan` and displays a polite terminal notification footer if an upgrade is available.
+- **🚀 Automated CI/CD Release Pipeline (`.github/workflows/release.yml`) (v5)**: Pushing git release tags (e.g. `v0.5.0`) automatically builds zero-dependency release binaries for Windows, Linux, and macOS, attaching them to GitHub Releases.
 - **🌐 English Localization (v4)**: Complete international English user interface, CLI options, warnings, error messages, and summary reports.
 - **🛡️ Recycle Bin / Trash Safety Net (Default)**: Items are moved to **Recycle Bin (Windows)** / **Trash (macOS)** / **XDG Trash (Linux)** by default. Accidental deletions can easily be restored from your OS Recycle Bin.
 - **⚡ Permanent Deletion Flag (`--permanent`)**: Bypasses the Recycle Bin for direct permanent file/folder removal (`std::fs::remove_dir_all`) with explicit red warning confirmation prompts.
@@ -33,76 +36,53 @@
 
 ---
 
-## ⚙️ Configuration File (`devener.toml`)
-
-Create a `devener.toml` file in your working directory to exclude specific folders:
-
-```toml
-# Example devener.toml
-exclude = [
-    "./important-project/node_modules",
-    "./keep-this/target"
-]
-```
-
----
-
 ## 📖 CLI Usage & Examples
 
-### 1. Interactive Scan (Default - Safe to Recycle Bin)
+### 1. Self-Update (`devener update`)
+
+```bash
+# Upgrade devener executable to latest version from GitHub Releases
+devener update
+```
+
+### 2. Interactive Scan (Default - Safe to Recycle Bin)
 
 ```bash
 devener scan
 ```
 
-### 2. Exclude Specific Paths
+### 3. Exclude Specific Paths
 
 ```bash
 devener scan --exclude ./my-app/node_modules --exclude ./rust/target
 ```
 
-### 3. Filter by Item Age (`--older-than`)
+### 4. Filter by Item Age (`--older-than`)
 
 ```bash
 # Only scan items older than 30 days
 devener scan --older-than 30d
-
-# Only scan items older than 12 hours
-devener scan --older-than 12h
 ```
 
-### 4. Output as Formatted JSON (`--json`)
+### 5. Output as Formatted JSON (`--json`)
 
 ```bash
 devener scan --json
 ```
 
-Output:
-```json
-[
-  {
-    "name": "node_modules",
-    "path": "./web_app/node_modules",
-    "size": 1240000000
-  }
-]
-```
-
-### 5. Guarded Auto-Clean (`--auto`)
+### 6. Guarded Auto-Clean (`--auto`)
 
 ```bash
-# Safe automated cleanup of items older than 30 days (moves to Recycle Bin)
 devener scan --auto --older-than 30d
 ```
 
-### 6. Permanent Deletion (`--permanent`)
+### 7. Permanent Deletion (`--permanent`)
 
 ```bash
-# Bypasses Recycle Bin with explicit confirmation warning
 devener scan --permanent
 ```
 
-### 7. View Lifetime Stats (`devener stats`)
+### 8. View Lifetime Stats (`devener stats`)
 
 ```bash
 devener stats
@@ -113,7 +93,7 @@ devener stats
 ## 🛠️ Development & Building
 
 ```bash
-# Run full unit test suite (7 tests)
+# Run full unit test suite
 cargo test
 
 # Build optimized release binary

@@ -3,11 +3,13 @@ mod config;
 mod models;
 mod scanner;
 mod stats;
+mod update;
 
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 use std::path::PathBuf;
 use std::process;
+use std::thread;
 
 #[derive(Parser)]
 #[command(name = "devener")]
@@ -47,12 +49,17 @@ enum Commands {
     },
     /// Show lifetime cleanup statistics and operation history log
     Stats,
+    /// Update devener executable to the latest version from GitHub Releases
+    Update,
 }
 
 fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
+        Commands::Update => {
+            update::run_update();
+        }
         Commands::Stats => {
             stats::print_stats();
         }
@@ -64,6 +71,13 @@ fn main() {
             older_than,
             auto,
         } => {
+            // Model B: Spawn background thread to check for updates silently if not in JSON mode
+            let update_handle = if !*json {
+                Some(thread::spawn(update::check_for_latest_release_silent))
+            } else {
+                None
+            };
+
             // Rule 1: --auto requires --older-than
             if *auto && older_than.is_none() {
                 eprintln!(
@@ -126,6 +140,7 @@ fn main() {
 
             if items.is_empty() {
                 println!("{}", "No cleanable artifacts found.".yellow());
+                print_update_notification_if_available(update_handle);
                 return;
             }
 
@@ -157,6 +172,7 @@ fn main() {
                 println!("{}", "Auto mode active. Processing items automatically...".cyan());
                 let report = cleaner::execute_clean(&items, false, "auto", &path.display().to_string());
                 cleaner::print_final_report(&report, false);
+                print_update_notification_if_available(update_handle);
                 return;
             }
 
@@ -165,6 +181,7 @@ fn main() {
 
             if selected.is_empty() {
                 println!("{}", "Cleanup cancelled. No items selected.".yellow());
+                print_update_notification_if_available(update_handle);
                 return;
             }
 
@@ -183,6 +200,22 @@ fn main() {
             } else {
                 println!("{}", "Cleanup cancelled by user.".yellow());
             }
+
+            print_update_notification_if_available(update_handle);
+        }
+    }
+}
+
+/// Helper function to join the background update check thread and print notification footer if available.
+fn print_update_notification_if_available(handle: Option<thread::JoinHandle<Option<String>>>) {
+    if let Some(h) = handle {
+        if let Ok(Some(latest_ver)) = h.join() {
+            println!(
+                "\n{} A new version of devener is available ({})! Run '{}' to upgrade.",
+                "💡".yellow(),
+                latest_ver.bold().green(),
+                "devener update".cyan()
+            );
         }
     }
 }
