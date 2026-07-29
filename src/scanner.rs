@@ -1,20 +1,22 @@
 use std::fs;
 use std::path::Path;
+use std::time::{Duration, SystemTime};
 use walkdir::WalkDir;
 use crate::config::is_path_excluded;
 use crate::models::ArtifactItem;
 use indicatif::{ProgressBar, ProgressStyle};
 
-/// Target directory names to detect across web, python, rust, C/C++, iOS/Mac, Java/Gradle, and Go ecosystems.
+/// Target directory names to detect across web, python, rust, C/C++, iOS/Mac, Java/Gradle, Go, and Jupyter ecosystems.
 pub const TARGET_PATTERNS: &[&str] = &[
     // Web / JS / TS ecosystem
     "node_modules",
     ".next",
     "dist",
     "build",
-    // Python ecosystem
+    // Python & Jupyter ecosystem
     "__pycache__",
     ".venv",
+    ".ipynb_checkpoints",
     // Rust / Cargo ecosystem
     "target",
     // C / C++ / CMake ecosystem
@@ -29,6 +31,46 @@ pub const TARGET_PATTERNS: &[&str] = &[
     // Go ecosystem
     "vendor",
 ];
+
+/// LaTeX build output file extensions
+pub const LATEX_EXTENSIONS: &[&str] = &[".aux", ".log", ".out", ".synctex.gz"];
+
+/// Parses human-readable age threshold strings like "30d", "12h", or "60m" into Duration.
+pub fn parse_age_threshold(s: &str) -> Option<Duration> {
+    let s = s.trim();
+    if s.is_empty() {
+        return None;
+    }
+
+    let (num_str, unit) = s.split_at(s.len() - 1);
+    let num: u64 = num_str.parse().ok()?;
+
+    match unit.to_ascii_lowercase().as_str() {
+        "d" => Some(Duration::from_secs(num * 86400)),
+        "h" => Some(Duration::from_secs(num * 3600)),
+        "m" => Some(Duration::from_secs(num * 60)),
+        "s" => Some(Duration::from_secs(num)),
+        _ => None,
+    }
+}
+
+/// Checks if a file or directory's modified timestamp is older than specified threshold Duration.
+pub fn is_item_older_than(path: &Path, threshold: Duration) -> bool {
+    let meta = match fs::metadata(path) {
+        Ok(m) => m,
+        Err(_) => return true,
+    };
+
+    let modified = match meta.modified() {
+        Ok(t) => t,
+        Err(_) => return true,
+    };
+
+    match SystemTime::now().duration_since(modified) {
+        Ok(age) => age >= threshold,
+        Err(_) => false,
+    }
+}
 
 /// Checks if the parent directory contains any file with matching extension (e.g. .csproj or .sln).
 pub fn has_sibling_file_with_extensions(path: &Path, extensions: &[&str]) -> bool {
@@ -78,21 +120,32 @@ pub fn get_dir_size(path: &Path) -> u64 {
         .sum()
 }
 
-/// Recursively scans directory for cleanable artifact pattern matches (simple & context-aware),
-/// displays a real-time progress indicator, filters out excluded paths, and sorts results descending by size.
-pub fn scan_directory(root: &Path, exclude_patterns: &[String]) -> Vec<ArtifactItem> {
+/// Recursively scans directory for cleanable artifact pattern matches (simple, context-aware, and LaTeX files),
+/// displays a progress indicator (if show_progress is true), filters excluded paths and age thresholds,
+/// and sorts results descending by size.
+pub fn scan_directory(
+    root: &Path,
+    exclude_patterns: &[String],
+    age_threshold: Option<Duration>,
+    show_progress: bool,
+) -> Vec<ArtifactItem> {
     let mut results = Vec::new();
     let mut it = WalkDir::new(root).into_iter();
 
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
-            .template("{spinner:.green} {msg}")
-            .unwrap_or_else(|_| ProgressStyle::default_spinner()),
-    );
-    pb.set_message("Scanning directory for cleanable artifacts...");
-    pb.enable_steady_tick(std::time::Duration::from_millis(80));
+    let pb = if show_progress {
+        let bar = ProgressBar::new_spinner();
+        bar.set_style(
+            ProgressStyle::default_spinner()
+                .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
+                .template("{spinner:.green} {msg}")
+                .unwrap_or_else(|_| ProgressStyle::default_spinner()),
+        );
+        bar.set_message("Scanning directory for cleanable artifacts...");
+        bar.enable_steady_tick(Duration::from_millis(80));
+        Some(bar)
+    } else {
+        None
+    };
 
     let mut scanned_count = 0u64;
 
@@ -101,50 +154,84 @@ pub fn scan_directory(root: &Path, exclude_patterns: &[String]) -> Vec<ArtifactI
 
         let entry = match entry_res {
             Ok(e) => e,
-            Err(_) => continue,
+            Err(_) => continue, // Gracefully ignore unreadable paths / permission errors
         };
-
-        if !entry.file_type().is_dir() {
-            continue;
-        }
 
         let file_name = entry.file_name().to_string_lossy();
         let item_path = entry.path();
 
-        let is_simple_match = TARGET_PATTERNS.contains(&file_name.as_ref());
-
-        let is_dotnet_match = (file_name == "bin" || file_name == "obj")
-            && has_sibling_file_with_extensions(item_path, &["csproj", "sln"]);
-
-        let is_unity_match = file_name == "Library"
-            && has_sibling_directories(item_path, &["Assets", "ProjectSettings"]);
-
-        if is_simple_match || is_dotnet_match || is_unity_match {
-            if is_path_excluded(item_path, exclude_patterns) {
+        if is_path_excluded(item_path, exclude_patterns) {
+            if entry.file_type().is_dir() {
                 it.skip_current_dir();
-                continue;
             }
+            continue;
+        }
 
-            let path_buf = item_path.to_path_buf();
-            let size = get_dir_size(&path_buf);
+        // Handle LaTeX individual file matching
+        if entry.file_type().is_file() {
+            let lower_name = file_name.to_lowercase();
+            let is_latex = LATEX_EXTENSIONS.iter().any(|&ext| lower_name.ends_with(ext));
 
-            results.push(ArtifactItem {
-                name: file_name.to_string(),
-                path: path_buf,
-                size,
-            });
+            if is_latex {
+                if let Some(threshold) = age_threshold {
+                    if !is_item_older_than(item_path, threshold) {
+                        continue;
+                    }
+                }
 
-            pb.set_message(format!(
-                "Scanning... {} folders checked, {} artifacts found",
-                scanned_count,
-                results.len()
-            ));
+                let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
+                results.push(ArtifactItem {
+                    name: file_name.to_string(),
+                    path: item_path.to_path_buf(),
+                    size,
+                });
+            }
+            continue;
+        }
 
-            it.skip_current_dir();
+        // Handle directory matching (simple + .NET + Unity + Jupyter)
+        if entry.file_type().is_dir() {
+            let is_simple_match = TARGET_PATTERNS.contains(&file_name.as_ref());
+
+            let is_dotnet_match = (file_name == "bin" || file_name == "obj")
+                && has_sibling_file_with_extensions(item_path, &["csproj", "sln"]);
+
+            let is_unity_match = file_name == "Library"
+                && has_sibling_directories(item_path, &["Assets", "ProjectSettings"]);
+
+            if is_simple_match || is_dotnet_match || is_unity_match {
+                if let Some(threshold) = age_threshold {
+                    if !is_item_older_than(item_path, threshold) {
+                        it.skip_current_dir();
+                        continue;
+                    }
+                }
+
+                let path_buf = item_path.to_path_buf();
+                let size = get_dir_size(&path_buf);
+
+                results.push(ArtifactItem {
+                    name: file_name.to_string(),
+                    path: path_buf,
+                    size,
+                });
+
+                if let Some(ref bar) = pb {
+                    bar.set_message(format!(
+                        "Scanning... {} items checked, {} artifacts found",
+                        scanned_count,
+                        results.len()
+                    ));
+                }
+
+                it.skip_current_dir();
+            }
         }
     }
 
-    pb.finish_and_clear();
+    if let Some(bar) = pb {
+        bar.finish_and_clear();
+    }
 
     results.sort_by(|a, b| b.size.cmp(&a.size));
     results
@@ -154,6 +241,13 @@ pub fn scan_directory(root: &Path, exclude_patterns: &[String]) -> Vec<ArtifactI
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn test_parse_age_threshold() {
+        assert_eq!(parse_age_threshold("30d"), Some(Duration::from_secs(30 * 86400)));
+        assert_eq!(parse_age_threshold("12h"), Some(Duration::from_secs(12 * 3600)));
+        assert_eq!(parse_age_threshold("invalid"), None);
+    }
 
     #[test]
     fn test_scan_directory_v1_and_v2_simple_patterns() {
@@ -174,7 +268,7 @@ mod tests {
             fs::write(folder.join("dummy.bin"), vec![0u8; 512]).unwrap();
         }
 
-        let items = scan_directory(&temp_dir, &[]);
+        let items = scan_directory(&temp_dir, &[], None, false);
 
         assert_eq!(items.len(), 7);
         let names: Vec<String> = items.into_iter().map(|i| i.name).collect();
@@ -207,7 +301,7 @@ mod tests {
         fs::write(arbitrary_folder.join("bin/executable"), vec![0u8; 200]).unwrap();
         fs::write(arbitrary_folder.join("obj/data"), vec![0u8; 100]).unwrap();
 
-        let items = scan_directory(&temp_dir, &[]);
+        let items = scan_directory(&temp_dir, &[], None, false);
 
         assert_eq!(items.len(), 2);
         
@@ -233,11 +327,30 @@ mod tests {
         fs::create_dir_all(system_library.join("Library")).unwrap();
         fs::write(system_library.join("Library/framework.dll"), vec![0u8; 500]).unwrap();
 
-        let items = scan_directory(&temp_dir, &[]);
+        let items = scan_directory(&temp_dir, &[], None, false);
 
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].name, "Library");
         assert!(items[0].path.display().to_string().contains("ValidUnityGame"));
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_latex_file_detection() {
+        let temp_dir = std::env::temp_dir().join("devener_test_latex");
+        fs::create_dir_all(&temp_dir).unwrap();
+        fs::write(temp_dir.join("paper.aux"), "aux content").unwrap();
+        fs::write(temp_dir.join("paper.log"), "log content").unwrap();
+        fs::write(temp_dir.join("paper.tex"), "\\documentclass{}").unwrap();
+
+        let items = scan_directory(&temp_dir, &[], None, false);
+        assert_eq!(items.len(), 2);
+
+        let names: Vec<String> = items.into_iter().map(|i| i.name).collect();
+        assert!(names.contains(&"paper.aux".to_string()));
+        assert!(names.contains(&"paper.log".to_string()));
+        assert!(!names.contains(&"paper.tex".to_string()));
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

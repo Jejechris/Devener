@@ -88,20 +88,6 @@ Documenting progress and milestone steps for building `devener`.
 - Command: `cargo test`
   Output: `1 passed`
 - Command: `cargo run -- scan test_dummy`
-  Output:
-  ```text
-  Scanning directory: test_dummy
-
-  Ditemukan 5 folder yang bisa dibersihkan:
-
-    [1] node_modules    test_dummy\web_app\node_modules               5.24 MB
-    [2] target          test_dummy\rust_cli\target                    1.57 MB
-    [3] .venv           test_dummy\py_service\.venv                   307.21 kB
-    [4] dist            test_dummy\web_app\dist                       51.21 kB
-    [5] __pycache__     test_dummy\py_service\__pycache__             2.05 kB
-
-  Total potensi space yang bisa direclaim: 7.18 MB
-  ```
 
 ---
 
@@ -112,17 +98,6 @@ Documenting progress and milestone steps for building `devener`.
 - Implemented `std::fmt::Display` for `ArtifactItem` to support rendering items in terminal menus.
 - Added interactive multi-select checkbox prompt using `inquire::MultiSelect`.
 - Added final preview confirmation prompt using `inquire::Confirm`.
-- Implemented `dry_run_clean` (Safety Dry-Run) so user can test selection and confirmation flow without deleting files.
-
-### Key Rust Concepts Learned
-- **`std::fmt::Display` Trait**: Customizing string formatting for custom structs.
-- **Interactive Prompts (`inquire`)**: Multi-select checkbox and confirmation dialogs.
-- **Graceful Error Handling (`Result`)**: Safely handling prompt aborts (e.g. `Esc` or `Ctrl+C`).
-
-### Verification & Testing
-- Command: `cargo test`
-  Output: `1 passed`
-- Interactive CLI flow verified safely in dry-run mode (0 files deleted).
 
 ---
 
@@ -133,90 +108,35 @@ Documenting progress and milestone steps for building `devener`.
 - Added error handling for filesystem error kinds (`PermissionDenied`, `NotFound`).
 - Added summary statistics structures `DeleteReport` and `FailedItem`.
 - Implemented `print_final_report` to render success counters, reclaimed space, and failed path details.
-- Added unit test in `src/cleaner.rs` testing recursive directory removal.
-
-### Key Rust Concepts Learned
-- **Filesystem Deletion (`std::fs::remove_dir_all`)**: Safely deleting directories recursively.
-- **`std::io::ErrorKind`**: Matching specific I/O errors to produce friendly user feedback.
-- **Summary Structs**: Structuring summary results for final report rendering.
-
-### Verification & Testing
-- Command: `cargo test`
-  Output: `cargo test: 2 passed (1 suite, 0.00s)`
 
 ---
 
 ## Milestone 6: README & Final Documentation
 
 ### Summary
-- Created production-ready [README.md](file:///c:/Users/Senna/Desktop/Projects/Devener/README.md) containing value proposition, demo output walkthrough, installation instructions, usage guide, development commands, and placeholder instructions for demo GIF.
+- Created production-ready [README.md](file:///c:/Users/Senna/Desktop/Projects/Devener/README.md).
 - Verified release build compilation (`cargo build --release`).
-
-### Key Rust Concepts Learned
-- **Binary Distribution (`cargo install`)**: Distributing Rust CLI applications as a zero-dependency standalone binary executable.
-- **Documentation Comments (`///`)**: Standardizing code comments for automated documentation generation.
-
-### Verification & Testing
-- Command: `cargo test` -> `2 passed (1 suite, 0.00s)`
-- Command: `cargo build --release` -> `Finished release profile [optimized] in 21.52s`
 
 ---
 
 ## Milestone 7: Ecosystem Expansion (Simple Patterns)
 
 ### Summary
-- Expanded `TARGET_PATTERNS` in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs) with new specific patterns:
-  - C/C++/CMake: `cmake-build-debug`, `cmake-build-release`, `CMakeFiles`
-  - iOS/Mac/Xcode: `DerivedData`, `Pods`
-  - Java/Gradle: `.gradle`
-  - Go: `vendor`
-- Verified backward compatibility with existing v1 patterns.
-
-### Key Rust Concepts Learned
-- **Static Array Slices (`const &[&str]`)**: Zero-allocation static constant data storage in binary executable.
-- **Non-breaking Regression Testing**: Ensuring added patterns do not break existing pattern detection.
-
-### Verification & Testing
-- Command: `cargo test` -> `2 passed (1 suite, 0.03s)`
-- Command: `cargo run -- scan test_dummy_v2`
-  Discovered all 7 pattern folders (`cmake-build-debug`, `DerivedData`, `.gradle`, `CMakeFiles`, `vendor`, `Pods`, `node_modules`).
+- Expanded `TARGET_PATTERNS` in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs) with C/C++, Xcode, Gradle, Go.
 
 ---
 
 ## Milestone 8: Context-Aware Detection — .NET (`bin`/`obj`)
 
 ### Summary
-- Implemented `has_sibling_file_with_extensions` in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
-- Configured context-aware matching for `bin` and `obj` folders: only matched if a `.csproj` or `.sln` file exists in the parent directory.
-- Added comprehensive unit test `test_dotnet_context_aware_detection` covering valid .NET projects vs arbitrary folders named `bin`/`obj`.
-
-### Key Rust Concepts Learned
-- **Path Navigation (`path.parent()`)**: Traversing to the parent directory of a path candidate.
-- **Directory Inspection (`std::fs::read_dir`)**: Inspecting sibling files in parent directories.
-- **Case-Insensitive String Matching (`eq_ignore_ascii_case`)**: Checking extensions cleanly across platforms.
-
-### Verification & Testing
-- Command: `cargo test` -> `2 passed (1 suite, 0.01s)`
-- Command: `cargo run -- scan test_dummy_dotnet`
-  Result: Only `MyDotNetApp\bin` and `MyDotNetApp\obj` were detected (with `.csproj` sibling). `LegitTool\bin` and `LegitTool\obj` (no `.csproj`) were correctly skipped.
+- Implemented `has_sibling_file_with_extensions` in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs) for .NET `bin`/`obj` matching.
 
 ---
 
 ## Milestone 9: Context-Aware Detection — Unity (`Library`)
 
 ### Summary
-- Implemented `has_sibling_directories` in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
-- Configured context-aware matching for `Library` folders: only matched if BOTH `Assets` and `ProjectSettings` directories exist in the parent folder.
-- Added comprehensive unit test `test_unity_context_aware_detection`.
-
-### Key Rust Concepts Learned
-- **Multi-Directory Inspection (`parent.join(name).is_dir()`)**: Verifying existence of multiple sibling folders.
-- **Boolean Iterator All (`.all(...)`)**: Ensuring all required conditions match simultaneously.
-
-### Verification & Testing
-- Command: `cargo test` -> `3 passed (1 suite, 0.01s)`
-- Command: `cargo run -- scan test_dummy_unity`
-  Result: Only `MyUnityGame\Library` (with `Assets` and `ProjectSettings` siblings) was detected. `SystemLib\Library` (no siblings) was correctly skipped.
+- Implemented `has_sibling_directories` in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs) for Unity `Library` matching.
 
 ---
 
@@ -224,12 +144,6 @@ Documenting progress and milestone steps for building `devener`.
 
 ### Summary
 - Integrated `indicatif::ProgressBar` spinner in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
-- Displayed real-time checked directory counter and discovered artifact counter during folder traversal.
-- Ensured spinner clears cleanly (`pb.finish_and_clear()`) before printing formatted scan result table.
-
-### Key Rust Concepts Learned
-- **Terminal Animations & Progress (`indicatif`)**: Rendering smooth terminal spinners and progress counters.
-- **TTY State Management**: Clearing progress elements cleanly to avoid terminal display corruption.
 
 ---
 
@@ -237,42 +151,27 @@ Documenting progress and milestone steps for building `devener`.
 
 ### Summary
 - Created [src/config.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/config.rs) with `DevenerConfig` struct.
-- Implemented TOML file parsing `load_from_dir` and path exclude matching logic `is_path_excluded`.
-- Integrated `devener.toml` loading in [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs).
-- Added unit test `test_is_path_excluded_matching` in `src/config.rs`.
-
-### Key Rust Concepts Learned
-- **Serde Serialization / Deserialization (`#[derive(Deserialize)]`)**: Mapping TOML document fields to Rust structs automatically.
-- **Cross-Platform Path Normalization**: Unifying `\` (Windows) and `/` (Unix) path separators for reliable string comparison.
 
 ---
 
 ## Milestone 12: CLI Flag `--exclude` (`clap`)
 
 ### Summary
-- Added `#[arg(short, long)] exclude: Vec<String>` option to `Commands::Scan` in [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs).
-- Merged exclude patterns from `devener.toml` and CLI `--exclude` arguments.
-- Filtered out matching items seamlessly during directory scanning.
-
-### Key Rust Concepts Learned
-- **Repeated CLI Flags in Clap**: Parsing multi-value list flags (`--exclude path1 --exclude path2`).
-- **Vector Combination (`extend`)**: Merging collection vectors efficiently.
+- Added `--exclude` flag to `Commands::Scan` in [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs).
 
 ---
 
 ## Milestone 13: README & Documentation Update v2
 
 ### Summary
-- Updated [README.md](file:///c:/Users/Senna/Desktop/Projects/Devener/README.md) to document all v2 features.
-- Built release binary `cargo build --release` successfully in 15.72s.
+- Updated [README.md](file:///c:/Users/Senna/Desktop/Projects/Devener/README.md) to document v2 features.
 
 ---
 
 ## Milestone 14: Research & Setup Crate `trash` (v3 Recycle Bin Safety Net)
 
 ### Summary
-- Researched cross-platform mechanics of the `trash` crate.
-- Added `trash = "5.1"` dependency to [Cargo.toml](file:///c:/Users/Senna/Desktop/Projects/Devener/Cargo.toml) and compiled clean (`cargo build`).
+- Researched cross-platform mechanics of `trash` crate and added `trash = "5.1"`.
 
 ---
 
@@ -280,33 +179,87 @@ Documenting progress and milestone steps for building `devener`.
 
 ### Summary
 - Replaced `std::fs::remove_dir_all` with `trash::delete(&item.path)` in [src/cleaner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/cleaner.rs).
-- Updated error matching to handle `trash::Error` variants gracefully.
-- Updated confirmation prompt messages to reflect moving to Recycle Bin.
-
-### Key Rust Concepts Learned
-- **Recycle Bin Operations (`trash::delete`)**: Moving directories to OS Recycle Bin safely instead of permanent deletion.
-- **Error Mapping**: Transforming `trash::Error` into user-friendly error strings.
-
-### Verification & Testing
-- Command: `cargo test` -> `5 passed (1 suite, 0.17s)`
 
 ---
 
 ## Milestone 16: Update Report Messaging & README for v3
 
 ### Summary
-- Updated report messages in [src/cleaner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/cleaner.rs) to clarify items are moved to OS Recycle Bin.
-- Updated [README.md](file:///c:/Users/Senna/Desktop/Projects/Devener/README.md) featuring the Recycle Bin Safety Net value proposition.
+- Updated report messages and README for Recycle Bin Safety Net feature.
 
 ---
 
 ## Milestone 17: Full Regression Check & Release Build v3
 
 ### Summary
-- Ran complete test suite regression check: all 5 unit tests passed cleanly (`5 passed`).
-- Built optimized release binary `cargo build --release` in 27.73s (`target/release/devener.exe`).
-- Verified complete system stability across v1, v2, and v3 features.
+- Verified full test suite and built release binary.
 
-### Verification & Testing
-- Command: `cargo test` -> `5 passed (1 suite, 0.18s)`
-- Command: `cargo build --release` -> `Finished release profile [optimized] target(s) in 27.73s`
+---
+
+## Milestone 18: English Localization (v4)
+
+### Summary
+- Localized all user-facing text and code comments to international English.
+
+---
+
+## Milestone 19: Permanent Deletion Flag (`--permanent`)
+
+### Summary
+- Implemented `--permanent` flag in [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs) and [src/cleaner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/cleaner.rs).
+- Displayed explicit bold red warning dialog before proceeding with permanent filesystem removal (`fs::remove_dir_all` / `fs::remove_file`).
+
+---
+
+## Milestone 20: Academic Patterns (Jupyter & LaTeX Files)
+
+### Summary
+- Added `.ipynb_checkpoints` to target directory patterns.
+- Implemented individual LaTeX file matching for `.aux`, `.log`, `.out`, and `.synctex.gz` extensions in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
+- Added unit test `test_latex_file_detection`.
+
+---
+
+## Milestone 21: Formatted JSON Output (`--json`)
+
+### Summary
+- Implemented `--json` output flag in [src/main.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/main.rs).
+- Derived `Serialize` & `Deserialize` on `ArtifactItem` in [src/models.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/models.rs).
+- Configured silent scan execution (skipping spinner and interactive prompts) when `--json` flag is passed.
+
+---
+
+## Milestone 22: File Age Filtering (`--older-than <N>d|h|m`)
+
+### Summary
+- Implemented `parse_age_threshold` and `is_item_older_than` using `std::fs::Metadata::modified()` in [src/scanner.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/scanner.rs).
+- Filtered out matching items modified more recently than the specified threshold.
+
+---
+
+## Milestone 23: Guarded Automation Mode (`--auto`)
+
+### Summary
+- Enforced strict safety guard rules:
+  1. `--auto` requires `--older-than` threshold (program aborts if missing).
+  2. `--auto` cannot be combined with `--permanent` (program aborts if passed).
+  3. Auto mode ALWAYS routes deletions through the OS Recycle Bin (`trash::delete`).
+  4. Auto mode prints list of target items about to be processed and outputs complete final summary reports.
+
+---
+
+## Milestone 24: Lifetime Stats & History Tracking (`devener stats`)
+
+### Summary
+- Created [src/stats.rs](file:///c:/Users/Senna/Desktop/Projects/Devener/src/stats.rs) using `dirs` crate to maintain log records in `~/.devener/history.json`.
+- Implemented `devener stats` subcommand displaying lifetime operations count, items cleaned, total reclaimed bytes, and recent history logs.
+
+---
+
+## Milestone 25: Full Regression Check, Release Build v4 & Git Push
+
+### Summary
+- Verified test suite: all 7 unit tests passed cleanly (`7 passed`).
+- Built optimized release binary `cargo build --release` in 6.61s.
+- Created git commit `feat(v4): localization to English, permanent deletion flag, academic patterns, JSON output, age filtering, guarded auto-clean, and stats tracking`.
+- Pushed commit to remote repository `https://github.com/Jejechris/Devener.git`.
