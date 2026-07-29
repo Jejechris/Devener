@@ -1,4 +1,4 @@
-# devener 🧹 (v5)
+# Devener 🧹 (Dev Environment Cleaner CLI v5)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub release](https://img.shields.io/github/v/release/Jejechris/Devener)](https://github.com/Jejechris/Devener/releases)
